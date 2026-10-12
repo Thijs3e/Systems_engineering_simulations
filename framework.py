@@ -92,7 +92,7 @@ def plot_results(
         p_bat: np.ndarray,
         c_bat: np.ndarray,
         dt: float,
-        start_time: float=0.0,
+        start_time: float = 0.0,
 ):
     n = len(p_grid)
     t = np.arange(n) * dt + start_time
