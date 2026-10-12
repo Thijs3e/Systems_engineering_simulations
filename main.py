@@ -40,3 +40,12 @@ if __name__ == '__main__':
         control=zero_on_the_meter_control,
         sim_time=48
     )
+
+    framework.plot_results(
+        p_consumption,
+        p_solar,
+        p_grid,
+        p_bat,
+        c_bat,
+        1
+    )
