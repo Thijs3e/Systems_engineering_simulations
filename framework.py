@@ -92,9 +92,11 @@ def plot_results(
         p_bat: np.ndarray,
         c_bat: np.ndarray,
         dt: float,
+        start_time: float=0.0,
 ):
     n = len(p_grid)
-    t = np.arange(n) * dt  # TODO: add start time
+    t = np.arange(n) * dt + start_time
+    # t = (np.arange(n) * dt + start_time) % 24
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
     fig.suptitle("Simulation results")
