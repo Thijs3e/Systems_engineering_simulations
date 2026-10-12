@@ -1,6 +1,8 @@
 import framework
 import numpy as np
 import controllers
+import numpy_resizers
+import solar_data_parser
 
 if __name__ == '__main__':
     p_consumption = np.full(24, 0.5)
@@ -11,9 +13,18 @@ if __name__ == '__main__':
     # Evening peak: 16:00-21:00
     p_consumption[16:21] = 1.0
 
-    p_solar = np.zeros(24)
-    # Solar generation from 07:00-19:00
-    p_solar[7:19] = 1.0
+    # p_solar = np.zeros(24)
+    # # Solar generation from 07:00-19:00
+    # p_solar[7:19] = 1.0
+
+    p_solar = solar_data_parser.load_solar_range(
+        "datasources/8_26.csv",
+        "01/08/2026",
+        0,
+        "01/08/2026",
+        23.75
+    )
+    p_solar = numpy_resizers.downsample_average(p_solar, 4)
 
     p_solar = np.tile(p_solar, 2)
     p_consumption = np.tile(p_consumption, 2)
