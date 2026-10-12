@@ -29,7 +29,8 @@ def simulate(
         total_capacity: float,
         dt: float,  # Timestep in hours
         control: Callable,
-        sim_time=24.0
+        start_time: float =0.0,
+        sim_time: float=24.0
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     :param p_solar: Solar generation over the simulation time, each timestep must be in kW
@@ -38,6 +39,7 @@ def simulate(
     :param total_capacity: total battery capacity in kWh
     :param dt: Timestep in hours, must be a divisor of 'sim_time' parameter
     :param control: A function that determines the amount of power the battery wil provide for that timestep, based on the conditions
+    :param start_time: time at which the simulation starts. Used if not starting at 0
     :param sim_time: total simulation time, 24 hours by default
     :return: Returns a tuple with p_grid, c_bat and p_bat
     """
@@ -52,6 +54,10 @@ def simulate(
         raise ValueError(
             f"Solar power array length {len(p_solar)} is not the same as number of simulation timesteps {n}"
         )
+    if not (0 <= c_init <= 1):
+        raise ValueError(
+            f"Initial SoC must be in [0,1], got {c_init}"
+        )
 
     p_grid = np.zeros(n)
     p_bat = np.zeros(n)
@@ -61,7 +67,7 @@ def simulate(
     e_bat = c_init*total_capacity
 
     for i in range(n):
-        t = i*dt
+        t = (i*dt+start_time) % 24
         soc = c_bat[i]
         p_bat[i] = control(
             t=t,
