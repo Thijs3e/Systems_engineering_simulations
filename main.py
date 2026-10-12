@@ -24,7 +24,7 @@ if __name__ == '__main__':
         c_init=0.5,
         total_capacity=10,
         dt=1,
-        control=controllers.zero_on_the_meter_control,
+        control=controllers.battery_fixed_time_only,
         sim_time=48
     )
 

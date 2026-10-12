@@ -76,7 +76,7 @@ def simulate(
             soc=soc,
             p_solar=p_solar[i],
             p_consumption=p_consumption[i],
-            cap=total_capacity
+            battery_capacity=total_capacity
         )
         p_grid[i] = p_consumption[i] - p_bat[i] - p_solar[i]  # could technically be resolved outside the loop
         e_bat -= p_bat[i] * dt  # positive p_bat means discharging the battery, hence -=
