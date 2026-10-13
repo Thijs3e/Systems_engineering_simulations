@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Large data files (over GitHub's 100 MB limit); regenerate with the scripts in data_fetch/
+datasources/fluvius_household_data.csv
+data_fetch/fluvius_raw/
