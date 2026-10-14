@@ -58,7 +58,7 @@ Useful options:
 | `--panels` | `0,2,...,16` | Panel counts to simulate |
 | `--batteries` | `0,5,10,15` | Usable battery capacities, kWh |
 | `--peak-method` | `threshold` | `threshold` (dynamic window) or `fixed` |
-| `--peak-threshold` | 0.8 | Threshold θ of the dynamic window (see 3.2) |
+| `--peak-threshold` | 0.8 | Threshold θ of the dynamic window (see 4.2) |
 | `--peak-hours` | 4 | Window length for `--peak-method fixed` |
 | `--c-rate` | 0.5 | Max battery power per kWh of capacity (kW/kWh) |
 | `--target` | `full` | `full`: fill the battery before the peak; `need`: only the forecast peak need |
@@ -85,7 +85,7 @@ Output in `results/<out>/`:
 
 | File | Content |
 |---|---|
-| `scenarios.csv` | One row per household x scenario with all annual statistics (section 3.6) |
+| `scenarios.csv` | One row per household x scenario with all annual statistics (section 4.6) |
 | `monthly.csv` | Same, per month |
 | `households/<id>_daily.csv.gz` | Per household, one row per scenario x day |
 | `median_per_scenario.csv` | Median household per scenario |
@@ -106,7 +106,39 @@ The first writes `results/<run>/figures/` (`kpi_bands.png`, `peak_draw_yearly.pn
 
 ---
 
-## 3. Components and formulas
+## 3. Model in brief
+
+Every quarter-hour (Δt = 0.25 h), with $P_\text{cons}$ consumption, $P_\text{sol}$ solar,
+$P_\text{bat}$ battery (> 0 discharging), $P_\text{grid}$ grid (> 0 import), battery capacity $C$ and stored energy $E$:
+
+1. **Power balance:** $P_\text{grid} = P_\text{cons} - P_\text{sol} - P_\text{bat}$
+2. **Battery:** $E_{t+1} = E_t - P_\text{bat}\,Δt$, with $0 \le E \le C$ and $|P_\text{bat}| \le 0.5\,C$
+
+At midnight of day $d$:
+
+3. **Average grid load of the past week:** $\bar L_d(q) = \frac{1}{7}\sum_{k=1}^{7} L_{d-k}(q)$
+4. **Peak window:** the contiguous block around $\max \bar L_d$ where
+   $\bar L_d(q) \ge \min \bar L_d + 0.8\,(\max \bar L_d - \min \bar L_d)$
+5. **Demand forecast** (same weekday, 4 weeks): $\hat P_{\text{cons},d}(q) = \frac{1}{4}\sum_{k=1}^{4} P_{\text{cons},d-7k}(q)$
+6. **Solar forecast** (14 days): $\hat P_{\text{sol},d}(q) = \frac{1}{14}\sum_{k=1}^{14} P_{\text{sol},d-k}(q)$
+7. **Grid energy to buy before the peak** (in the cheapest quarter-hours):
+   $E_\text{grid} = \max\big(0,\; C - E_0 - \text{forecast solar surplus before the peak}\big)$
+
+During the day:
+
+8. **Battery operation:** before the peak, only charge (solar surplus + planned grid charging); during and after the
+   peak, $P_\text{bat} = P_\text{cons} - P_\text{sol}$ (limited by formula 2)
+
+Results:
+
+9. **Peak-hour grid draw:** $\sum_\text{peak} \max(0, P_\text{grid})\,Δt$
+10. **Savings:** $\sum P_\text{cons}\,Δt\,p \;-\; \sum P_\text{grid}\,Δt\,p$, with $p$ the day-ahead price
+
+The details of each step are in section 4.
+
+---
+
+## 4. Components and formulas (detailed)
 
 ### Notation and sign convention
 - Time step Δt = 0.25 h; day *d* = 0..365; quarter-hour *q* = 0..95.
@@ -123,15 +155,15 @@ $$P_\text{grid} = P_\text{cons} - P_\text{sol} - P_\text{bat}$$
 
 | File | Role |
 |---|---|
-| `year_data.py` | Loads and aligns the four data sources (3.1) |
-| `forecasting.py` | Midnight forecasts: peak window, household demand, solar (3.2-3.4) |
-| `peak_shaving_controller.py` | Daily charging plan and battery operating modes (3.5) |
-| `year_simulation.py` | Year simulation loop, statistics, scenario sweep (3.6) |
+| `year_data.py` | Loads and aligns the four data sources (4.1) |
+| `forecasting.py` | Midnight forecasts: peak window, household demand, solar (4.2-4.4) |
+| `peak_shaving_controller.py` | Daily charging plan and battery operating modes (4.5) |
+| `year_simulation.py` | Year simulation loop, statistics, scenario sweep (4.6) |
 | `year_plots.py`, `make_summary_plots.py` | Figures |
 | `run_single_household.py`, `run_all_households.py` | Command-line entry points |
 | `framework.py`, `controllers.py`, `main.py` | Earlier single-day prototype (not used by the year simulation) |
 
-### 3.1 Data (`year_data.py`)
+### 4.1 Data (`year_data.py`)
 - Household: $P_\text{cons} = E_\text{15min} / Δt$ (kWh per quarter → kW). The households have no PV, so the
   energy taken from the grid equals their consumption.
 - Solar for *n* panels: $P_\text{sol} = n \cdot P_\text{panel}$, with $P_\text{panel}$ the PVGIS output of one
@@ -140,7 +172,7 @@ $$P_\text{grid} = P_\text{cons} - P_\text{sol} - P_\text{bat}$$
 - All sources share the same daylight-saving convention (hour missing on 31 Mar, repeated on 27 Oct), so the rows
   align one to one.
 
-### 3.2 Peak window (F1.4, `forecasting.py`)
+### 4.2 Peak window (F1.4, `forecasting.py`)
 Chosen at midnight from the **Dutch grid load** $L$ of the previous $N = 7$ days.
 
 1. Average load profile per quarter-hour:
@@ -158,17 +190,17 @@ consecutive hours with the highest $\sum \bar L_d(q)$.
 For evaluation, the **actual** peak window of each day is computed with the same rule on that day's own load
 $L_d(q)$ (known only in hindsight).
 
-### 3.3 Household demand forecast (F1.1)
+### 4.3 Household demand forecast (F1.1)
 Average of the same weekday over the previous 4 weeks:
 $$\hat P_{\text{cons},d}(q) = \frac{1}{4}\sum_{k=1}^{4} P_{\text{cons},d-7k}(q)$$
 During the first week (no same weekday yet) the average of all previous days is used; day 0 has no forecast (zero).
 
-### 3.4 Solar forecast (F1.2)
+### 4.4 Solar forecast (F1.2)
 Season-based profile: average daily profile of the previous 14 days,
 $$\hat P_{\text{sol},d}(q) = \frac{1}{14}\sum_{k=1}^{14} P_{\text{sol},d-k}(q)$$
 (fewer days at the start of the year; zero on day 0).
 
-### 3.5 Battery controller (F1.6, `peak_shaving_controller.py`)
+### 4.5 Battery controller (F1.6, `peak_shaving_controller.py`)
 Battery: usable capacity $C$ (kWh), max power $P_\text{max} = c_\text{rate} \cdot C$ (default 0.5 kW/kWh),
 stored energy $E$. Lossless, fully usable from 0 to $C$.
 
@@ -203,7 +235,7 @@ $$E_{t+1} = E_t - P_\text{bat} \cdot Δt$$
 
 The simulation starts at $E = 0.5\,C$ on 1 January.
 
-### 3.6 Statistics (`year_simulation.py`)
+### 4.6 Statistics (`year_simulation.py`)
 With $\mathbb{1}_\text{peak}$ marking the planned peak quarters, $p$ the day-ahead price (EUR/kWh) and sums over the
 year:
 
@@ -230,7 +262,7 @@ solar energy forecast (%), overlap between planned and actual peak windows (%), 
 
 ---
 
-## 4. Assumptions and limitations
+## 5. Assumptions and limitations
 - Export is paid at the same price as import (net metering at the wholesale day-ahead price; no taxes or grid fees).
 - Battery and solar panels are lossless; the full battery capacity is usable; no cooling or standby losses.
 - State of charge is known exactly (F1.3 frozen); grid impedance (F1.5) and fault handling (F5) are not modelled,
