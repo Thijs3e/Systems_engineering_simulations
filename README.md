@@ -11,16 +11,11 @@ The simulation is run for 300 real households, for every combination of panel co
 
 ### Requirements
 - Python 3.11+ (developed with Python 3.13)
-- Packages for the simulation: `numpy`, `pandas`, `matplotlib`
-- Extra packages only to re-download the data: `requests`, `pvlib`
 
-All are listed in `requirements.txt`:
+Requirements are listed in `requirements.txt`:
 ```
 python -m pip install -r requirements.txt
 ```
-
-> On Windows, if `python` is not found, call the interpreter by its full path, e.g. in PowerShell:
-> `$py = "$env:LOCALAPPDATA\Programs\Python\Python313\python.exe"; & $py run_single_household.py`
 
 ### Input data (`datasources/`)
 All files cover 2024 in local Dutch/Belgian time (CET/CEST): 366 days x 96 quarter-hours = 35,136 rows.
