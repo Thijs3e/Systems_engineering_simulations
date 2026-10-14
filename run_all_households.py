@@ -136,6 +136,9 @@ def main():
     parser.add_argument("--peak-hours", type=float, default=4.0)
     parser.add_argument("--c-rate", type=float, default=0.5)
     parser.add_argument("--target", choices=["full", "need"], default="full")
+    parser.add_argument("--no-grid-charging", action="store_true", help="charge the battery from solar only")
+    parser.add_argument("--no-hold", action="store_true",
+                        help="self-consumption all day instead of holding the charge for the peak")
     parser.add_argument("--plots", action="store_true", help="also save per-household figures")
     parser.add_argument("--out", default="all_households", help="output folder name inside results/")
     parser.add_argument("--overwrite", action="store_true", help="redo households that already have results")
@@ -144,7 +147,8 @@ def main():
     cfg = SimConfig(
         forecast=ForecastConfig(peak_method=args.peak_method, peak_threshold=args.peak_threshold,
                                 peak_hours=args.peak_hours),
-        controller=ControllerConfig(c_rate=args.c_rate, target=args.target),
+        controller=ControllerConfig(c_rate=args.c_rate, target=args.target, grid_charging=not args.no_grid_charging,
+                                    hold_before_peak=not args.no_hold),
     )
     out_dir = os.path.join(RESULTS_DIR, args.out)
     parts_dir = os.path.join(out_dir, "households")

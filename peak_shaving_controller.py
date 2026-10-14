@@ -12,6 +12,9 @@ Operating modes during the day:
     peak      : discharge to cover household demand not covered by solar, store excess solar
     post-peak : self-consumption (zero on the meter) until midnight
 
+Variants (ControllerConfig): grid_charging=False charges from solar only; hold_before_peak=False makes the battery
+do self-consumption all day (no peak priority), combine both for a solar-only self-consumption battery.
+
 Sign convention (same as framework.py): p_bat > 0 discharges, p_bat < 0 charges,
 p_grid = p_consumption - p_bat - p_solar (> 0 import, < 0 export).
 """
@@ -28,6 +31,8 @@ class ControllerConfig:
     target: str = "full"  # "full": battery as full as possible at peak start, "need": forecast peak net demand only
     solar_forecast_trust: float = 1.0  # < 1 plans more grid charging in case solar falls short of the forecast
     export_during_peak: bool = False  # True: also discharge the battery into the grid during the peak
+    grid_charging: bool = True  # False: the battery is only charged from solar
+    hold_before_peak: bool = True  # False: pure self-consumption all day, the peak gets no priority
 
 
 @dataclass
@@ -61,6 +66,8 @@ def plan_day(e_now: float, capacity: float, p_max: float, peak_start: int, peak_
 
     # Greedy fill of the cheapest pre-peak quarters, leaving inverter headroom for the forecast solar
     grid_charge = np.zeros(STEPS_PER_DAY)
+    if not cfg.grid_charging:
+        e_from_grid = 0.0
     headroom = p_max - solar_charge
     for q in np.argsort(price[:peak_start], kind="stable"):
         if e_from_grid <= 1e-9:
@@ -76,7 +83,9 @@ def control_step(q: int, plan: DayPlan, p_consumption: float, p_solar: float, e_
                  capacity: float, p_max: float, cfg: ControllerConfig) -> float:
     """Battery power for quarter `q` of the day, limited by the inverter and the stored energy."""
     net = p_consumption - p_solar  # > 0: demand not covered by solar
-    if q < plan.peak_start:
+    if not cfg.hold_before_peak:
+        p_bat = net  # self-consumption: cover demand and store surplus all day
+    elif q < plan.peak_start:
         p_bat = -(max(-net, 0.0) + plan.grid_charge[q])
     elif q < plan.peak_end:
         p_bat = p_max if cfg.export_during_peak else net

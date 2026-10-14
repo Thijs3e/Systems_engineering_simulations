@@ -144,6 +144,7 @@ def figure_compare(runs: dict[str, pd.DataFrame], coverage_pct: float = 99.0):
         ("max_import_kw", "Median highest 15-min grid draw [kW]"),
         ("battery_grid_charge_kwh", "Median battery charging from grid [kWh/yr]"),
         ("savings_eur", "Median savings [EUR/yr]"),
+        ("self_sufficiency_pct", "Median self-sufficiency [%]"),
     ]
     batteries = sorted(c for c in next(iter(runs.values()))["battery_kwh"].unique() if c > 0)
     fig, axs = plt.subplots(len(kpis), len(batteries), figsize=(4.2 * len(batteries), 3.0 * len(kpis)),
@@ -154,7 +155,8 @@ def figure_compare(runs: dict[str, pd.DataFrame], coverage_pct: float = 99.0):
         agg = s.groupby(["battery_kwh", "n_panels"]).agg(
             peak_grid_import_kwh=("peak_grid_import_kwh", "median"),
             covered=("covered", "mean"), max_import_kw=("max_import_kw", "median"),
-            battery_grid_charge_kwh=("battery_grid_charge_kwh", "median"), savings_eur=("savings_eur", "median"))
+            battery_grid_charge_kwh=("battery_grid_charge_kwh", "median"), savings_eur=("savings_eur", "median"),
+            self_sufficiency_pct=("self_sufficiency_pct", "median"))
         for col, cap in enumerate(batteries):
             for row, (kpi, _) in enumerate(kpis):
                 a = agg.loc[cap]

@@ -40,6 +40,9 @@ def main():
     parser.add_argument("--peak-hours", type=float, default=4.0, help="fixed method: window length")
     parser.add_argument("--c-rate", type=float, default=0.5, help="max battery power per kWh of capacity")
     parser.add_argument("--target", choices=["full", "need"], default="full")
+    parser.add_argument("--no-grid-charging", action="store_true", help="charge the battery from solar only")
+    parser.add_argument("--no-hold", action="store_true",
+                        help="self-consumption all day instead of holding the charge for the peak")
     parser.add_argument("--plot-scenario", default="10,10", help="panels,battery_kwh for the time-series plot")
     parser.add_argument("--plot-day", type=int, default=160, help="first day (0 = 1 Jan) of the time-series plot")
     parser.add_argument("--show", action="store_true")
@@ -48,7 +51,8 @@ def main():
     cfg = SimConfig(
         forecast=ForecastConfig(peak_method=args.peak_method, peak_threshold=args.peak_threshold,
                                 peak_hours=args.peak_hours),
-        controller=ControllerConfig(c_rate=args.c_rate, target=args.target),
+        controller=ControllerConfig(c_rate=args.c_rate, target=args.target, grid_charging=not args.no_grid_charging,
+                                    hold_before_peak=not args.no_hold),
     )
     data = load_year_data(args.household)
     table, results, fc = run_sweep(data, args.panels, args.batteries, cfg)

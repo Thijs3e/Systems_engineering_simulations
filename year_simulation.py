@@ -132,6 +132,7 @@ def compute_metrics(data: YearData, r: SimResult, p_max: float) -> dict:
         "export_hours": (exp > 0).sum() * DT,
         "self_consumption_pct": 100 * (1 - exp.sum() / total_solar) if total_solar > 0 else np.nan,
         "self_sufficiency_pct": 100 * (1 - imp.sum() / cons.sum()),
+        "days_zero_grid_import": int((imp.reshape(N_DAYS, STEPS_PER_DAY).sum(axis=1) < 1e-6).sum()),
         # money at the day-ahead price, export paid at the same price as import
         "energy_cost_eur": float(cost.sum()),
         "peak_cost_eur": float(cost[peak].sum()),

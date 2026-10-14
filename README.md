@@ -62,6 +62,8 @@ Useful options:
 | `--peak-hours` | 4 | Window length for `--peak-method fixed` |
 | `--c-rate` | 0.5 | Max battery power per kWh of capacity (kW/kWh) |
 | `--target` | `full` | `full`: fill the battery before the peak; `need`: only the forecast peak need |
+| `--no-grid-charging` | off | Charge the battery from solar only |
+| `--no-hold` | off | Self-consumption all day instead of holding the charge until the peak |
 | `--plot-scenario` | `10,10` | `panels,battery` shown in `week.png` |
 | `--plot-day` | 160 | First day (0 = 1 Jan) of `week.png` |
 | `--show` | off | Also open the figures |
@@ -74,12 +76,22 @@ Runs every household in parallel (`--workers 4` by default, ~9 min) and accepts 
 Each household is saved as soon as it is done; re-running the same command skips finished households
 (`--overwrite` to redo them). Failed households are listed in `errors.log` without stopping the run.
 
-The three runs used in the report:
+The runs used in the report:
 ```
 python run_all_households.py --out all_full
 python run_all_households.py --target need --out all_need
 python run_all_households.py --peak-method fixed --peak-hours 4 --out all_fixed4h
+python run_all_households.py --no-grid-charging --out all_solar_only
+python run_all_households.py --no-grid-charging --no-hold --out all_self
 ```
+
+| Run | Battery charged from | Before the peak | Peak window |
+|---|---|---|---|
+| `all_full` | solar + grid (fill completely) | hold for the peak | dynamic |
+| `all_need` | solar + grid (forecast peak need only) | hold for the peak | dynamic |
+| `all_fixed4h` | solar + grid (fill completely) | hold for the peak | fixed 4 h |
+| `all_solar_only` | solar only | hold for the peak | dynamic |
+| `all_self` | solar only | self-consumption all day (no peak priority) | dynamic |
 
 Output in `results/<out>/`:
 
@@ -218,7 +230,7 @@ stored energy $E$. Lossless, fully usable from 0 to $C$.
    until $E_\text{grid}$ is covered.
 
 The plan is fixed for the day (open-loop); forecast errors show up as a battery that is not completely full, or
-full earlier than planned.
+full earlier than planned. With `--no-grid-charging`, $E_\text{grid} = 0$ (solar only).
 
 **Operating modes**, every quarter-hour, with net demand $P_\text{net} = P_\text{cons} - P_\text{sol}$:
 
@@ -227,6 +239,8 @@ full earlier than planned.
 | Before the peak ($q < s$) | Hold and charge: no discharging; store solar surplus + planned grid charging | $P_\text{bat} = -\big(\max(0, -P_\text{net}) + P_\text{gridchg}(q)\big)$ |
 | During the peak ($s \le q < e$) | Cover the house: battery supplies what solar does not; surplus solar charges it | $P_\text{bat} = P_\text{net}$ |
 | After the peak ($q \ge e$) | Self-consumption until midnight | $P_\text{bat} = P_\text{net}$ |
+
+With `--no-hold` the battery uses the self-consumption rule $P_\text{bat} = P_\text{net}$ all day.
 
 **Limits** applied to the requested power, then the battery is updated:
 $$P_\text{bat} \leftarrow \text{clip}\big(P_\text{bat},\, -P_\text{max},\, P_\text{max}\big), \qquad
@@ -255,6 +269,7 @@ year:
 | Battery grid charging | $\sum \max\big(0,\, -P_\text{bat} - \max(0, P_\text{sol} - P_\text{cons})\big)Δt$ |
 | Equivalent full cycles | $\sum \max(0, P_\text{bat})Δt \,/\, C$ |
 | Days peak fully covered | days with zero peak-hour grid draw |
+| Days with zero grid draw | days without any grid import |
 | Battery full at peak start | days with $E \ge 0.99\,C$ when the peak starts |
 
 Forecast quality (`forecast_quality.csv`): mean absolute error of the demand forecast (kW), error of the daily
