@@ -14,8 +14,9 @@ The simulation is run for 300 real households, for every combination of panel co
 - Packages for the simulation: `numpy`, `pandas`, `matplotlib`
 - Extra packages only to re-download the data: `requests`, `pvlib`
 
+All are listed in `requirements.txt`:
 ```
-python -m pip install numpy pandas matplotlib requests pvlib
+python -m pip install -r requirements.txt
 ```
 
 > On Windows, if `python` is not found, call the interpreter by its full path, e.g. in PowerShell:
