@@ -72,7 +72,9 @@ Useful options:
 ```
 python run_all_households.py --out all_full
 ```
-Runs every household in parallel (`--workers 4` by default, ~9 min) and accepts the same options as above.
+Runs every household in parallel (`--workers 4` by default, ~9 min) and accepts the same options as above, plus
+`--households` (`all` or a list such as `301,302,303`), `--plots` (also save figures per household, slower) and
+`--out` (output folder name).
 Each household is saved as soon as it is done; re-running the same command skips finished households
 (`--overwrite` to redo them). Failed households are listed in `errors.log` without stopping the run.
 
@@ -112,9 +114,20 @@ Load all daily files at once with
 python make_summary_plots.py --run all_full
 python make_summary_plots.py --compare all_full,all_need,all_fixed4h
 ```
-The first writes `results/<run>/figures/` (`kpi_bands.png`, `peak_draw_yearly.png`, `monthly_peak_draw.png`,
-`household_size.png`, `sufficient_battery.png`); the second writes `results/comparison/compare_runs.png`.
+The first writes `results/<run>/figures/`, the second `results/comparison/compare_runs.png`.
 `--scatter-panels` selects the panel count used in the monthly and household-size figures (default 8).
+
+| Figure | Shows |
+|---|---|
+| `kpi_bands.png` | Peak draw reduction, savings, highest grid draw and off-peak draw change vs panels, per battery size (median + middle 50 % of households) |
+| `peak_draw_yearly.png` | Yearly grid draw during peak hours vs panels, per battery size |
+| `monthly_peak_draw.png` | Peak-hour grid draw per month, absolute and as share of peak demand |
+| `household_size.png` | Per household: annual consumption vs share of peak demand still drawn from the grid |
+| `sufficient_battery.png` | Share of households reaching ≥ 99 % peak draw reduction, per battery size |
+| `compare_runs.png` | All runs side by side: peak draw, coverage, highest draw, grid charging, savings, self-sufficiency |
+
+Only the figures (`.png`) in `results/` are committed to git; the result data (≈ 1.4 GB) is not and is recreated
+by running the commands above.
 
 ---
 
@@ -283,6 +296,8 @@ solar energy forecast (%), overlap between planned and actual peak windows (%), 
 - State of charge is known exactly (F1.3 frozen); grid impedance (F1.5) and fault handling (F5) are not modelled,
   except the inverter power limit.
 - Households are Flemish (no Dutch per-household data is public), the grid load and prices are Dutch.
+- The household data is anonymised and has no household size, dwelling type or floor area, so recommendations are
+  not differentiated by household type, although the required battery size clearly increases with consumption.
 - PVGIS hourly weather data stops at 2023, so 2023 solar weather is mapped onto the 2024 calendar: seasonal yields
   are realistic, but day-to-day weather is not correlated with the 2024 consumption and grid data.
 - Forecasts are simple averages; the plan is made once at midnight and not corrected during the day.
