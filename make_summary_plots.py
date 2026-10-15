@@ -53,26 +53,13 @@ def figure_bands(scenarios: pd.DataFrame, n_households: int):
 
 
 def figure_peak_draw_yearly(scenarios: pd.DataFrame, n_households: int):
-    """Yearly grid draw during peak hours; right panel zooms in on the battery scenarios."""
-    fig, (ax_all, ax_zoom) = plt.subplots(1, 2, figsize=(13, 5))
+    """Yearly grid draw during peak hours, all scenarios."""
+    fig, ax = plt.subplots(figsize=(9, 5.5))
     fig.suptitle(f"Yearly grid draw during peak hours, {n_households} households: "
                  f"median (line) and middle 50 % (band)", color=TEXT)
-    band_plot(ax_all, scenarios, "peak_grid_import_kwh", "All scenarios [kWh/yr]")
-    # zoom: same colours as the left panel, without the no-battery series
-    zoom = scenarios[scenarios["battery_kwh"] > 0]
-    stats = zoom.groupby(["battery_kwh", "n_panels"])["peak_grid_import_kwh"].quantile([0.25, 0.5, 0.75]).unstack()
-    for i, cap in enumerate(sorted(scenarios["battery_kwh"].unique())):
-        if cap == 0:
-            continue
-        s = stats.loc[cap]
-        ax_zoom.fill_between(s.index, s[0.25], s[0.75], color=SERIES_COLORS[i], alpha=0.15, linewidth=0)
-        ax_zoom.plot(s.index, s[0.5], color=SERIES_COLORS[i], linewidth=2, marker="o", markersize=5,
-                     label=BATTERY_LABEL.format(cap))
-    ax_zoom.set_title("Zoom on battery scenarios [kWh/yr]", fontsize=10, loc="left")
-    ax_zoom.set_xlabel("Number of 400 Wp panels")
-    for ax in (ax_all, ax_zoom):
-        ax.set_ylim(bottom=0)
-    ax_all.legend(title="Battery", fontsize=8, title_fontsize=8)
+    band_plot(ax, scenarios, "peak_grid_import_kwh", "Grid draw during peak hours [kWh/yr]")
+    ax.set_ylim(bottom=0)
+    ax.legend(title="Battery", fontsize=8, title_fontsize=8)
     fig.tight_layout()
     return fig
 
@@ -168,8 +155,10 @@ def figure_compare(runs: dict[str, pd.DataFrame], coverage_pct: float = 99.0):
     for row, (_, label) in enumerate(kpis):
         axs[row, 0].set_ylabel(label, fontsize=8)
     handles, labels = axs[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, title="Run", loc="upper right", ncol=len(labels), fontsize=8, title_fontsize=8)
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    # own line under the title, so it never overlaps it whatever the number of runs
+    fig.legend(handles, labels, title="Run", loc="upper center", bbox_to_anchor=(0.5, 0.975), ncol=len(labels),
+               fontsize=8, title_fontsize=8)
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
     return fig
 
 
